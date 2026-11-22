@@ -1,0 +1,1782 @@
+openapi: 3.0.3
+info:
+  title: Penilaian Multi-Penilai dan Rubrik (Tim 5-B, MyIF Capstone Modul 5)
+  version: 0.2.0
+  description: 'Kontrak API Tim 5-B (Modul 5 Penilaian Multi-Penilai dan Rubrik), disusun dari tabel E3, E5, E6
+    proposal backend dan Kamus Data Bersama.
+
+    Tidak boleh ada 500 untuk kesalahan masukan pengguna (Kamus Data Bersama, bagian 4).
+
+    Ekstensi: x-peran = peran yang boleh memanggil, x-kebutuhan = ID kebutuhan di E3.
+
+
+    Keputusan kontrak berikut melengkapi bagian yang belum ditetapkan di proposal (USULAN, menunggu konfirmasi PIC
+    kontrak):
+
+    1. Login 200 berisi token, peran, identitas, nama, kode_kelompok (hanya mahasiswa), kedaluwarsa.
+
+    2. PUT penilaian dan POST kirim memakai body {skor: [{kriteria_id, nilai}], catatan}; body POST kirim opsional.
+
+    3. PUT /komponen memakai body {komponen: [...]}; GET dan PUT mengembalikan daftar berpaginasi.
+
+    4. Nilai desimal (nilai_gabungan, nilai_akhir) berupa string dua desimal, mis. "76.50".
+
+    5. GET /kelompok/{kode}/nilai mengembalikan 200 dengan komponen kosong bila belum ada yang dirilis.
+
+    6. GET /penugasan menerima filter opsional kode_kelompok dan komponen.
+
+    7. Bentuk item respons (RubrikRingkas, TugasItem, HasilItem, dan seterusnya) adalah rancangan awal.
+
+    '
+servers:
+- url: http://localhost:8110
+  description: Lokal (APP_PORT tim 5-B, E10)
+security:
+- bearerAuth: []
+tags:
+- name: Sistem
+- name: Auth
+- name: Rubrik
+- name: Komponen
+- name: Penugasan
+- name: Penilaian
+- name: Hasil
+- name: Mahasiswa
+- name: Rekap
+- name: Audit
+paths:
+  /healthz:
+    get:
+      tags:
+      - Sistem
+      summary: Pemeriksaan kesehatan (proses hidup dan koneksi database)
+      x-peran:
+      - publik
+      x-kebutuhan:
+      - BASE-09
+      security: []
+      responses:
+        '200':
+          description: Sehat
+        '503':
+          description: Database tidak terjangkau
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login dengan identitas dan kata sandi
+      x-peran:
+      - publik
+      x-kebutuhan:
+      - BASE-01
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Berhasil. Berisi token JWT, peran, dan identitas pengguna.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          description: KREDENSIAL_SALAH (pesan sama untuk identitas tidak ada dan kata sandi salah)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+        '429':
+          $ref: '#/components/responses/TooMany429'
+  /api/v1/rubrik:
+    post:
+      tags:
+      - Rubrik
+      summary: Membuat rubrik beserta kriteria
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RubrikInput'
+      responses:
+        '201':
+          description: Rubrik dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rubrik'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '409':
+          description: KODE_SUDAH_ADA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+    get:
+      tags:
+      - Rubrik
+      summary: Daftar rubrik
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-01
+      responses:
+        '200':
+          description: Daftar rubrik
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RubrikList'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+      parameters:
+      - $ref: '#/components/parameters/Halaman'
+      - $ref: '#/components/parameters/PerHalaman'
+  /api/v1/rubrik/{id}:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+      - Rubrik
+      summary: Detail satu rubrik
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-01
+      responses:
+        '200':
+          description: Detail rubrik
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rubrik'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+    put:
+      tags:
+      - Rubrik
+      summary: Mengubah rubrik yang belum terkunci
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RubrikInput'
+      responses:
+        '200':
+          description: Rubrik diubah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rubrik'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: RUBRIK_TERKUNCI (rubrik sudah dipakai menilai)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+  /api/v1/rubrik/{id}/versi:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    post:
+      tags:
+      - Rubrik
+      summary: Membuat versi baru dari rubrik
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-01
+      responses:
+        '201':
+          description: Versi baru dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rubrik'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+  /api/v1/komponen:
+    get:
+      tags:
+      - Komponen
+      summary: Daftar komponen dan bobotnya
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-02
+      responses:
+        '200':
+          description: Daftar komponen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KomponenList'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+    put:
+      tags:
+      - Komponen
+      summary: Mengganti seluruh daftar komponen dan bobot (atomik)
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-02
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KomponenInput'
+      responses:
+        '200':
+          description: Daftar komponen diganti; berisi seluruh daftar baru
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KomponenList'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: KOMPONEN_TERPAKAI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+  /api/v1/penugasan:
+    get:
+      tags:
+      - Penugasan
+      summary: Daftar penugasan
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-03
+      responses:
+        '200':
+          description: Daftar penugasan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PenugasanList'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+      parameters:
+      - name: kode_kelompok
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: komponen
+        in: query
+        required: false
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Halaman'
+      - $ref: '#/components/parameters/PerHalaman'
+    post:
+      tags:
+      - Penugasan
+      summary: Menugaskan penilai ke kelompok × komponen (maksimal 4 penilai)
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-03
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PenugasanInput'
+      responses:
+        '201':
+          description: Penugasan dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Penugasan'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: PENILAI_MAKSIMAL, PENUGASAN_DUPLIKAT, atau NILAI_TERKUNCI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+  /api/v1/penugasan/{id}:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    delete:
+      tags:
+      - Penugasan
+      summary: Mencabut penugasan
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-03
+      responses:
+        '204':
+          description: Penugasan dicabut
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: PENUGASAN_SUDAH_DINILAI atau NILAI_TERKUNCI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/penilai/tugas:
+    get:
+      tags:
+      - Penilaian
+      summary: Daftar tugas milik penilai yang login
+      x-peran:
+      - dosen
+      - mitra
+      x-kebutuhan:
+      - M5-04
+      responses:
+        '200':
+          description: Daftar tugas penilai
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TugasList'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+      parameters:
+      - $ref: '#/components/parameters/Halaman'
+      - $ref: '#/components/parameters/PerHalaman'
+  /api/v1/penugasan/{id}/penilaian:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+      - Penilaian
+      summary: Melihat penilaian pada satu penugasan
+      description: Dosen dan mitra hanya untuk penugasan miliknya sendiri; koordinator boleh melihat.
+      x-peran:
+      - dosen
+      - mitra
+      - koordinator
+      x-kebutuhan:
+      - M5-04
+      responses:
+        '200':
+          description: Penilaian pada penugasan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Penilaian'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+    put:
+      tags:
+      - Penilaian
+      summary: Menyimpan draf atau mengubah skor
+      x-peran:
+      - dosen
+      - mitra
+      x-kebutuhan:
+      - M5-04
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PenilaianInput'
+      responses:
+        '200':
+          description: Draf tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Penilaian'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: NILAI_TERKUNCI (komponen sudah final)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+  /api/v1/penugasan/{id}/penilaian/kirim:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    post:
+      tags:
+      - Penilaian
+      summary: Mengirim penilaian (hitung ulang nilai gabungan dan penanda kalibrasi)
+      description: Body opsional. Bila skor disertakan, skor disimpan (upsert) lalu status menjadi dikirim dalam
+        satu transaksi (E4 Operasi 2). Bila body kosong, yang dikirim adalah draf yang sudah tersimpan; 422 bila
+        belum semua kriteria terisi. Kirim ganda bersifat idempoten.
+      x-peran:
+      - dosen
+      - mitra
+      x-kebutuhan:
+      - M5-04
+      - M5-05
+      - M5-06
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PenilaianInput'
+      responses:
+        '200':
+          description: Penilaian terkirim
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Penilaian'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: NILAI_TERKUNCI atau SEDANG_DIPROSES (kunci baris tidak terlepas dalam 5 detik; boleh dicoba
+            ulang)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+  /api/v1/hasil:
+    get:
+      tags:
+      - Hasil
+      summary: Daftar hasil per kelompok × komponen (status dan penanda kalibrasi)
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-05
+      - M5-06
+      parameters:
+      - name: kode_kelompok
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: komponen
+        in: query
+        required: false
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Halaman'
+      - $ref: '#/components/parameters/PerHalaman'
+      responses:
+        '200':
+          description: Daftar hasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasilList'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+  /api/v1/hasil/{kode_kelompok}/{komponen}:
+    parameters:
+    - $ref: '#/components/parameters/KodeKelompok'
+    - $ref: '#/components/parameters/Komponen'
+    get:
+      tags:
+      - Hasil
+      summary: Detail hasil satu kelompok × komponen
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-05
+      - M5-06
+      responses:
+        '200':
+          description: Detail hasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasilDetail'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+  /api/v1/hasil/{kode_kelompok}/{komponen}/finalisasi:
+    parameters:
+    - $ref: '#/components/parameters/KodeKelompok'
+    - $ref: '#/components/parameters/Komponen'
+    post:
+      tags:
+      - Hasil
+      summary: Memfinalisasi komponen (nilai terkunci)
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-07
+      responses:
+        '200':
+          description: Komponen final
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasilItem'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: BELUM_LENGKAP, PERLU_KALIBRASI, STATUS_TIDAK_VALID, atau SEDANG_DIPROSES
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/hasil/{kode_kelompok}/{komponen}/buka-kembali:
+    parameters:
+    - $ref: '#/components/parameters/KodeKelompok'
+    - $ref: '#/components/parameters/Komponen'
+    post:
+      tags:
+      - Hasil
+      summary: Membuka kembali komponen final dengan alasan wajib
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-08
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BukaKembaliRequest'
+      responses:
+        '200':
+          description: Komponen dibuka kembali
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasilItem'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: STATUS_TIDAK_VALID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+  /api/v1/hasil/{kode_kelompok}/{komponen}/rilis:
+    parameters:
+    - $ref: '#/components/parameters/KodeKelompok'
+    - $ref: '#/components/parameters/Komponen'
+    post:
+      tags:
+      - Hasil
+      summary: Merilis nilai komponen
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-09
+      responses:
+        '200':
+          description: Nilai dirilis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasilItem'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+        '409':
+          description: BELUM_FINAL atau STATUS_TIDAK_VALID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/kelompok/{kode_kelompok}/nilai:
+    parameters:
+    - $ref: '#/components/parameters/KodeKelompok'
+    get:
+      tags:
+      - Mahasiswa
+      summary: Nilai agregat dan catatan kelompok setelah dirilis (tanpa nama penilai)
+      description: Mahasiswa hanya untuk kelompoknya sendiri dan hanya setelah dirilis; koordinator boleh melihat.
+      x-peran:
+      - mahasiswa
+      - koordinator
+      x-kebutuhan:
+      - M5-09
+      responses:
+        '200':
+          description: Nilai kelompok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NilaiKelompok'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '404':
+          $ref: '#/components/responses/TidakAda404'
+  /api/v1/rekap:
+    get:
+      tags:
+      - Rekap
+      summary: Rekap nilai akhir (tertimbang semua komponen), JSON atau CSV
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - M5-10
+      parameters:
+      - name: tingkat
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - kelompok
+          - mahasiswa
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - json
+          - csv
+      - $ref: '#/components/parameters/Halaman'
+      - $ref: '#/components/parameters/PerHalaman'
+      responses:
+        '200':
+          description: 'Rekap nilai: JSON berpaginasi, atau berkas CSV bila format=csv (Content-Type text/csv; Content-Disposition:
+            attachment). Kolom CSV: kode_kelompok, nama_kelompok, [nrp, nama_mahasiswa bila tingkat=mahasiswa],
+            satu kolom per komponen, nilai_akhir.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RekapList'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '409':
+          description: BELUM_LENGKAP (belum semua komponen final)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+  /api/v1/audit:
+    get:
+      tags:
+      - Audit
+      summary: Jejak audit per kelompok × komponen
+      x-peran:
+      - koordinator
+      x-kebutuhan:
+      - AC-9
+      parameters:
+      - name: kode_kelompok
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: komponen
+        in: query
+        required: false
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Halaman'
+      - $ref: '#/components/parameters/PerHalaman'
+      responses:
+        '200':
+          description: Daftar jejak audit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditList'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '403':
+          $ref: '#/components/responses/Dilarang403'
+        '422':
+          $ref: '#/components/responses/Validasi422'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    KodeKelompok:
+      name: kode_kelompok
+      in: path
+      required: true
+      schema:
+        type: string
+        example: CP-2026-1-07
+      description: Format CP-<periode>-nn (Kamus Data Bersama)
+    Komponen:
+      name: komponen
+      in: path
+      required: true
+      description: Kode komponen (komponen.kode)
+      schema:
+        type: string
+    Halaman:
+      name: halaman
+      in: query
+      required: false
+      description: Nomor halaman, mulai 1 (Kamus Data Bersama)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerHalaman:
+      name: per_halaman
+      in: query
+      required: false
+      description: Jumlah data per halaman (Kamus Data Bersama)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    Tidak401:
+      description: 401 TIDAK_TERAUTENTIKASI (token tidak ada, tidak valid, atau kedaluwarsa)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Dilarang403:
+      description: 403 DILARANG (peran atau kepemilikan data tidak sesuai)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TidakAda404:
+      description: 404 TIDAK_DITEMUKAN
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Validasi422:
+      description: 422 VALIDASI_GAGAL (aturan validasi pada E6)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest400:
+      description: 400 PERMINTAAN_RUSAK (JSON rusak atau tipe salah)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooMany429:
+      description: 429 TERLALU_BANYAK_PERMINTAAN (Kamus Data Bersama; maksimal 5 kegagalan per 15 menit per identitas,
+        E8)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required:
+      - error
+      description: Format error mengikuti Kamus Data Bersama, bagian 4.
+      properties:
+        error:
+          type: object
+          required:
+          - kode
+          - pesan
+          properties:
+            kode:
+              type: string
+              description: Konstanta huruf besar yang stabil, mis. VALIDASI_GAGAL
+              example: VALIDASI_GAGAL
+            pesan:
+              type: string
+              description: Ringkasan untuk manusia
+            detail:
+              type: object
+              additionalProperties: true
+              description: Opsional; mis. pemetaan field ke pesan validasi
+    LoginRequest:
+      type: object
+      required:
+      - identitas
+      - password
+      properties:
+        identitas:
+          type: string
+          maxLength: 64
+          description: nrp (10 digit), kode_dosen, kode_mitra (MTR-nnn), atau kode koordinator
+          example: '5053241025'
+        password:
+          type: string
+          maxLength: 72
+          description: Maksimal 72 byte (batas bcrypt)
+          example: contoh-kata-sandi
+    KriteriaInput:
+      type: object
+      required:
+      - nama
+      - bobot
+      - cpmk
+      properties:
+        nama:
+          type: string
+        bobot:
+          type: integer
+          minimum: 1
+          maximum: 100
+        cpmk:
+          type: integer
+          minimum: 1
+        deskripsi:
+          type: string
+    RubrikInput:
+      type: object
+      required:
+      - kode
+      - nama
+      - kriteria
+      properties:
+        kode:
+          type: string
+          pattern: ^[a-z0-9-]{3,32}$
+          description: Huruf kecil, angka, dan tanda hubung; 3 sampai 32 karakter
+        nama:
+          type: string
+        kriteria:
+          type: array
+          minItems: 1
+          maxItems: 20
+          description: Nama kriteria unik; jumlah bobot tepat 100
+          items:
+            $ref: '#/components/schemas/KriteriaInput'
+    KomponenItem:
+      type: object
+      required:
+      - kode
+      - nama
+      - rubrik_id
+      - bobot_komponen
+      properties:
+        kode:
+          type: string
+          example: sidang-proposal
+        nama:
+          type: string
+          example: Sidang Proposal
+        rubrik_id:
+          type: integer
+          format: int64
+          example: 1
+        bobot_komponen:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 25
+        rubrik_nama:
+          type: string
+          readOnly: true
+          example: Rubrik Penilaian Capstone Project
+    KomponenInput:
+      type: object
+      description: 'Kode komponen unik; jumlah bobot_komponen tepat 100; rubrik harus ada. Body berbentuk {"komponen":
+        [...]}.'
+      required:
+      - komponen
+      properties:
+        komponen:
+          type: array
+          items:
+            $ref: '#/components/schemas/KomponenItem'
+    PenugasanInput:
+      type: object
+      required:
+      - penilai
+      - kode_kelompok
+      - komponen
+      properties:
+        penilai:
+          type: string
+          description: kode_dosen atau kode_mitra (MTR-nnn) pengguna berperan dosen atau mitra
+        kode_kelompok:
+          type: string
+          description: Format CP-<periode>-nn (Kamus Data Bersama)
+          example: CP-2026-1-07
+        komponen:
+          type: string
+          description: Kode komponen
+    SkorInput:
+      type: object
+      required:
+      - kriteria_id
+      - nilai
+      properties:
+        kriteria_id:
+          type: integer
+          format: int64
+        nilai:
+          type: integer
+          minimum: 0
+          maximum: 100
+    PenilaianInput:
+      type: object
+      description: Daftar skor berupa array {kriteria_id, nilai}. Saat kirim, semua kriteria rubrik harus terisi
+        dan milik rubrik komponen tersebut.
+      properties:
+        skor:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkorInput'
+          example:
+          - kriteria_id: 11
+            nilai: 80
+          - kriteria_id: 12
+            nilai: 85
+          - kriteria_id: 13
+            nilai: 75
+        catatan:
+          type: string
+          maxLength: 2000
+    BukaKembaliRequest:
+      type: object
+      required:
+      - alasan
+      properties:
+        alasan:
+          type: string
+          minLength: 10
+          maxLength: 500
+          description: Wajib; panjang dihitung setelah trim
+          example: Skor kriteria 2 salah input oleh penilai.
+    PaginatedList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      description: Bentuk umum respons daftar berpaginasi (Kamus Data Bersama). Tiap endpoint memakai varian bertipe
+        (RubrikList, TugasList, dan seterusnya).
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        halaman:
+          type: integer
+        per_halaman:
+          type: integer
+        total:
+          type: integer
+    LoginResponse:
+      type: object
+      required:
+      - token
+      - peran
+      - identitas
+      - nama
+      properties:
+        token:
+          type: string
+          description: 'JWT HS256 (klaim sub, peran, iat, exp; berlaku 60 menit). Dikirim sebagai header Authorization:
+            Bearer <token>.'
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.contoh.contoh
+        peran:
+          type: string
+          enum:
+          - mahasiswa
+          - dosen
+          - mitra
+          - koordinator
+          example: koordinator
+        identitas:
+          type: string
+          example: KOOR1
+        nama:
+          type: string
+          example: Koordinator Capstone
+        kode_kelompok:
+          type: string
+          nullable: true
+          description: Hanya terisi untuk peran mahasiswa (dicari server dari anggota_kelompok); null untuk peran
+            lain.
+          example: null
+        kedaluwarsa:
+          type: string
+          format: date-time
+          example: '2026-12-08T10:00:00+07:00'
+    Kriteria:
+      type: object
+      required:
+      - id
+      - nama
+      - bobot
+      - cpmk
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 11
+        nama:
+          type: string
+          example: Identifikasi masalah dan kebutuhan mitra
+        bobot:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 8
+        cpmk:
+          type: integer
+          minimum: 1
+          example: 1
+        deskripsi:
+          type: string
+          example: ''
+    RubrikRingkas:
+      type: object
+      required:
+      - id
+      - kode
+      - versi
+      - nama
+      - terkunci
+      - dibuat_pada
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        kode:
+          type: string
+          example: rubrik-capstone
+        versi:
+          type: integer
+          minimum: 1
+          example: 1
+        nama:
+          type: string
+          example: Rubrik Penilaian Capstone Project
+        terkunci:
+          type: boolean
+          example: false
+        dibuat_pada:
+          type: string
+          format: date-time
+          example: '2026-12-02T09:00:00+07:00'
+    Rubrik:
+      allOf:
+      - $ref: '#/components/schemas/RubrikRingkas'
+      - type: object
+        required:
+        - kriteria
+        properties:
+          kriteria:
+            type: array
+            items:
+              $ref: '#/components/schemas/Kriteria'
+    StatusPenilaian:
+      type: string
+      enum:
+      - belum_dinilai
+      - draf
+      - dikirim
+      example: draf
+      description: belum_dinilai = belum ada baris penilaian; draf dan dikirim sesuai tabel penilaian.
+    StatusKomponen:
+      type: string
+      enum:
+      - berjalan
+      - final
+      - dirilis
+      example: berjalan
+    Penugasan:
+      type: object
+      required:
+      - id
+      - penilai
+      - peran_penilai
+      - kode_kelompok
+      - komponen
+      - status_penilaian
+      - dibuat_pada
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 5
+        penilai:
+          type: string
+          example: DSN01
+        nama_penilai:
+          type: string
+          example: Dosen Contoh
+        peran_penilai:
+          type: string
+          enum:
+          - dosen
+          - mitra
+          example: dosen
+        kode_kelompok:
+          type: string
+          example: CP-2026-1-07
+        komponen:
+          type: string
+          example: sidang-proposal
+        status_penilaian:
+          $ref: '#/components/schemas/StatusPenilaian'
+        dibuat_pada:
+          type: string
+          format: date-time
+          example: '2026-12-02T10:00:00+07:00'
+    TugasItem:
+      type: object
+      required:
+      - penugasan_id
+      - kode_kelompok
+      - komponen
+      - status_penilaian
+      - status_komponen
+      properties:
+        penugasan_id:
+          type: integer
+          format: int64
+          example: 5
+        kode_kelompok:
+          type: string
+          example: CP-2026-1-07
+        nama_kelompok:
+          type: string
+          example: Kelompok 07
+        komponen:
+          type: string
+          example: sidang-proposal
+        nama_komponen:
+          type: string
+          example: Sidang Proposal
+        status_penilaian:
+          $ref: '#/components/schemas/StatusPenilaian'
+        status_komponen:
+          $ref: '#/components/schemas/StatusKomponen'
+    Skor:
+      type: object
+      required:
+      - kriteria_id
+      - nilai
+      properties:
+        kriteria_id:
+          type: integer
+          format: int64
+          example: 11
+        nilai:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 80
+    Penilaian:
+      type: object
+      required:
+      - penugasan_id
+      - kode_kelompok
+      - komponen
+      - status
+      - status_komponen
+      - rubrik
+      - skor
+      properties:
+        penugasan_id:
+          type: integer
+          format: int64
+          example: 5
+        kode_kelompok:
+          type: string
+          example: CP-2026-1-07
+        komponen:
+          type: string
+          example: sidang-proposal
+        status:
+          $ref: '#/components/schemas/StatusPenilaian'
+        status_komponen:
+          $ref: '#/components/schemas/StatusKomponen'
+        rubrik:
+          $ref: '#/components/schemas/Rubrik'
+        skor:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skor'
+        catatan:
+          type: string
+          example: ''
+        dikirim_pada:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        diubah_pada:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-12-05T14:00:00+07:00'
+    NilaiDesimal:
+      type: string
+      pattern: ^[0-9]{1,3}\.[0-9]{2}$
+      example: '76.50'
+      description: Nilai desimal sebagai string dua desimal persis dari server (NUMERIC(5,2), Kamus Data bagian
+        7). Frontend menampilkannya apa adanya, tanpa menghitung ulang dengan float.
+    HasilItem:
+      type: object
+      required:
+      - kode_kelompok
+      - komponen
+      - status
+      - perlu_kalibrasi
+      properties:
+        kode_kelompok:
+          type: string
+          example: CP-2026-1-07
+        nama_kelompok:
+          type: string
+          example: Kelompok 07
+        komponen:
+          type: string
+          example: sidang-proposal
+        nama_komponen:
+          type: string
+          example: Sidang Proposal
+        status:
+          $ref: '#/components/schemas/StatusKomponen'
+        nilai_gabungan:
+          allOf:
+          - $ref: '#/components/schemas/NilaiDesimal'
+          nullable: true
+        perlu_kalibrasi:
+          type: boolean
+          example: false
+        jumlah_penugasan:
+          type: integer
+          example: 2
+        jumlah_dikirim:
+          type: integer
+          example: 2
+        diubah_pada:
+          type: string
+          format: date-time
+          example: '2026-12-05T15:00:00+07:00'
+    HasilDetail:
+      allOf:
+      - $ref: '#/components/schemas/HasilItem'
+      - type: object
+        required:
+        - kriteria
+        - penilai
+        properties:
+          kriteria:
+            type: array
+            description: Skor per kriteria dari penilai yang sudah mengirim. selisih = skor tertinggi dikurangi
+              terendah.
+            items:
+              type: object
+              required:
+              - kriteria_id
+              - nama
+              - cpmk
+              - bobot
+              - skor
+              properties:
+                kriteria_id:
+                  type: integer
+                  format: int64
+                  example: 11
+                nama:
+                  type: string
+                  example: Identifikasi masalah dan kebutuhan mitra
+                cpmk:
+                  type: integer
+                  example: 1
+                bobot:
+                  type: integer
+                  example: 8
+                nilai_gabungan:
+                  allOf:
+                  - $ref: '#/components/schemas/NilaiDesimal'
+                  nullable: true
+                selisih:
+                  type: integer
+                  example: 28
+                perlu_kalibrasi:
+                  type: boolean
+                  example: true
+                skor:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - penilai
+                    - peran
+                    - nilai
+                    properties:
+                      penilai:
+                        type: string
+                        example: DSN01
+                      nama_penilai:
+                        type: string
+                        example: Dosen Contoh
+                      peran:
+                        type: string
+                        enum:
+                        - dosen
+                        - mitra
+                        example: dosen
+                      nilai:
+                        type: integer
+                        minimum: 0
+                        maximum: 100
+                        example: 78
+          penilai:
+            type: array
+            items:
+              type: object
+              required:
+              - penugasan_id
+              - penilai
+              - peran
+              - status_penilaian
+              properties:
+                penugasan_id:
+                  type: integer
+                  format: int64
+                  example: 5
+                penilai:
+                  type: string
+                  example: DSN01
+                nama_penilai:
+                  type: string
+                  example: Dosen Contoh
+                peran:
+                  type: string
+                  enum:
+                  - dosen
+                  - mitra
+                  example: dosen
+                status_penilaian:
+                  $ref: '#/components/schemas/StatusPenilaian'
+                dikirim_pada:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  example: '2026-12-05T14:30:00+07:00'
+    NilaiKelompok:
+      type: object
+      required:
+      - kode_kelompok
+      - komponen
+      description: Hanya komponen berstatus dirilis. Sebelum ada yang dirilis, komponen = [] (UI menampilkan keadaan
+        kosong). Tanpa nama penilai dan tanpa skor per penilai.
+      properties:
+        kode_kelompok:
+          type: string
+          example: CP-2026-1-07
+        nama_kelompok:
+          type: string
+          example: Kelompok 07
+        komponen:
+          type: array
+          items:
+            type: object
+            required:
+            - kode
+            - nama
+            - bobot_komponen
+            - nilai_gabungan
+            - kriteria
+            properties:
+              kode:
+                type: string
+                example: sidang-proposal
+              nama:
+                type: string
+                example: Sidang Proposal
+              bobot_komponen:
+                type: integer
+                example: 25
+              nilai_gabungan:
+                $ref: '#/components/schemas/NilaiDesimal'
+              kriteria:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - nama
+                  - cpmk
+                  - bobot
+                  - nilai_gabungan
+                  properties:
+                    nama:
+                      type: string
+                      example: Identifikasi masalah dan kebutuhan mitra
+                    cpmk:
+                      type: integer
+                      example: 1
+                    bobot:
+                      type: integer
+                      example: 8
+                    nilai_gabungan:
+                      $ref: '#/components/schemas/NilaiDesimal'
+              catatan:
+                type: array
+                items:
+                  type: string
+                example:
+                - Pembahasan masalah sudah jelas.
+    RekapItem:
+      type: object
+      required:
+      - kode_kelompok
+      - komponen
+      - nilai_akhir
+      properties:
+        kode_kelompok:
+          type: string
+          example: CP-2026-1-07
+        nama_kelompok:
+          type: string
+          example: Kelompok 07
+        nrp:
+          type: string
+          nullable: true
+          description: Terisi hanya bila tingkat=mahasiswa.
+          example: null
+        nama_mahasiswa:
+          type: string
+          nullable: true
+          example: null
+        komponen:
+          type: array
+          items:
+            type: object
+            required:
+            - kode
+            - nilai_gabungan
+            properties:
+              kode:
+                type: string
+                example: sidang-proposal
+              nilai_gabungan:
+                $ref: '#/components/schemas/NilaiDesimal'
+        nilai_akhir:
+          $ref: '#/components/schemas/NilaiDesimal'
+    AuditItem:
+      type: object
+      required:
+      - id
+      - waktu
+      - aktor
+      - aksi
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        waktu:
+          type: string
+          format: date-time
+          example: '2026-12-05T15:00:00+07:00'
+        aktor:
+          type: string
+          example: KOOR1
+        aksi:
+          type: string
+          enum:
+          - SKOR_DISIMPAN
+          - SKOR_DIKIRIM
+          - FINALISASI
+          - BUKA_KEMBALI
+          - RILIS
+          - PENUGASAN_DITAMBAH
+          - PENUGASAN_DIHAPUS
+          example: FINALISASI
+        kode_kelompok:
+          type: string
+          nullable: true
+          example: CP-2026-1-07
+        komponen:
+          type: string
+          nullable: true
+          example: sidang-proposal
+        nilai_lama:
+          type: object
+          nullable: true
+          additionalProperties: true
+          example: null
+        nilai_baru:
+          type: object
+          nullable: true
+          additionalProperties: true
+          example:
+            status: final
+            nilai_gabungan: '76.50'
+        alasan:
+          type: string
+          nullable: true
+          example: null
+    RubrikList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RubrikRingkas'
+        halaman:
+          type: integer
+          example: 1
+        per_halaman:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 1
+    KomponenList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KomponenItem'
+        halaman:
+          type: integer
+          example: 1
+        per_halaman:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 1
+    PenugasanList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Penugasan'
+        halaman:
+          type: integer
+          example: 1
+        per_halaman:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 1
+    TugasList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TugasItem'
+        halaman:
+          type: integer
+          example: 1
+        per_halaman:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 1
+    HasilList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/HasilItem'
+        halaman:
+          type: integer
+          example: 1
+        per_halaman:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 1
+    RekapList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RekapItem'
+        halaman:
+          type: integer
+          example: 1
+        per_halaman:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 1
+    AuditList:
+      type: object
+      required:
+      - data
+      - halaman
+      - per_halaman
+      - total
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditItem'
+        halaman:
+          type: integer
+          example: 1
+        per_halaman:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 1
