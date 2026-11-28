@@ -67,6 +67,44 @@ paths:
           $ref: '#/components/responses/Validasi422'
         '429':
           $ref: '#/components/responses/TooMany429'
+  /api/v1/auth/ganti-password:
+    post:
+      tags:
+      - Auth
+      summary: Mengganti password (wajib setelah login pertama)
+      description: >
+        Hanya bisa dipanggil bila harus_ganti_password = true.
+        Setelah berhasil, harus_ganti_password menjadi false dan
+        token baru diterbitkan.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GantiPasswordRequest'
+      responses:
+        '200':
+          description: Password berhasil diganti. Berisi token baru.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest400'
+        '401':
+          $ref: '#/components/responses/Tidak401'
+        '409':
+          description: >
+            TIDAK_PERLU_GANTI (harus_ganti_password sudah false,
+            endpoint ini tidak perlu dipanggil lagi)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/Validasi422'
   /api/v1/rubrik:
     post:
       tags:
@@ -993,6 +1031,7 @@ components:
       - peran
       - identitas
       - nama
+      - harus_ganti_password
       properties:
         token:
           type: string
@@ -1009,6 +1048,12 @@ components:
           type: string
         nama:
           type: string
+        harus_ganti_password:
+          type: boolean
+          description: >
+            Bila true, pengguna wajib mengganti password sebelum menggunakan
+            fitur lain. Token yang diterima hanya boleh dipakai untuk memanggil
+            POST /api/v1/auth/ganti-password.
         kode_kelompok:
           type: string
           nullable: true
@@ -1016,6 +1061,16 @@ components:
         kedaluwarsa:
           type: string
           format: date-time
+    GantiPasswordRequest:
+      type: object
+      required:
+      - password_baru
+      properties:
+        password_baru:
+          type: string
+          minLength: 8
+          maxLength: 72
+          description: Password baru, minimal 8 karakter, maksimal 72 byte (batas bcrypt)
     Kriteria:
       type: object
       required:

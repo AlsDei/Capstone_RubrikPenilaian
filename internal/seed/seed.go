@@ -89,8 +89,8 @@ var urutan = []tabel{
 		},
 		sisip: func(ctx context.Context, db DB, r []string, hash string) (bool, error) {
 			return sisipBaru(ctx, db,
-				`INSERT INTO pengguna (identitas, nama, peran, password_hash) VALUES ($1, $2, $3, $4)
-				 ON CONFLICT (identitas) DO NOTHING`, r[0], r[1], r[2], hash)
+				`INSERT INTO pengguna (identitas, nama, peran, password_hash, harus_ganti_password) VALUES ($1, $2, $3, $4, TRUE)
+ 				 ON CONFLICT (identitas) DO NOTHING`, r[0], r[1], r[2], hash)
 		},
 	},
 	{

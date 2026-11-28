@@ -5,7 +5,8 @@ CREATE TABLE pengguna (
     identitas     TEXT PRIMARY KEY, -- nrp / kode_dosen / kode_mitra / kode koordinator
     nama          TEXT NOT NULL,
     peran         TEXT NOT NULL CHECK (peran IN ('mahasiswa','dosen','mitra','koordinator')),
-    password_hash TEXT NOT NULL
+    password_hash TEXT NOT NULL,
+    harus_ganti_password BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE kelompok (
