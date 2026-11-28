@@ -40,6 +40,8 @@ services:
       # Kata sandi dengan karakter khusus (@ : / ?) harus di-URL-encode pada DATABASE_URL
       DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:?isi JWT_SECRET di .env}
+      # Kata sandi semua akun seed; hanya dipakai oleh "docker compose run --rm app seed"
+      SEED_PASSWORD: ${SEED_PASSWORD:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3110}
       TZ: Asia/Jakarta
     ports:

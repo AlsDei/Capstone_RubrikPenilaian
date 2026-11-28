@@ -12,9 +12,10 @@ Kontrak API: [`openapi.yaml`](openapi.yaml).
 | Database tes (`TEST_DB_PORT`) | 5610 |
 
 ## Menjalankan backend
-1. Salin `.env.example` menjadi `.env`, lalu isi `DB_PASSWORD` dan `JWT_SECRET` (mis. `openssl rand -hex 32`). `GO_VERSION` samakan dengan baris `go` di `go.mod`.
+1. Salin `.env.example` menjadi `.env`, lalu isi `DB_PASSWORD`, `JWT_SECRET` (mis. `openssl rand -hex 32`), dan `SEED_PASSWORD` (kata sandi untuk semua akun seed, minimal 8 karakter). `GO_VERSION` samakan dengan baris `go` di `go.mod`.
 2. `docker compose up -d --build --wait`
-3. Impor akun, kelompok, dan anggota: `docker compose run --rm app seed`
+3. Impor akun, kelompok, dan anggota dari `db/seed/*.csv`: `docker compose run --rm app seed`
+   (idempoten; aman diulang. Kelompok `CP-2026-1-01`-`CP-2026-1-30`. Akun: `KOOR01`, `DSN01`-`DSN06`, `MTR-001`-`MTR-006`, mahasiswa `5000240001`-`5000240150`; semua memakai `SEED_PASSWORD`.)
 4. Periksa: `curl http://localhost:8110/healthz`
 
 Mati: `docker compose down` (data tetap) atau `docker compose down -v` (data dihapus, migrasi dijalankan ulang).
