@@ -1,33 +1,9 @@
 openapi: 3.0.3
 info:
   title: Penilaian Multi-Penilai dan Rubrik (Tim 5-B, MyIF Capstone Modul 5)
-  version: 0.2.0
-  description: 'Kontrak API Tim 5-B (Modul 5 Penilaian Multi-Penilai dan Rubrik), disusun dari tabel E3, E5, E6
-    proposal backend dan Kamus Data Bersama.
-
-    Tidak boleh ada 500 untuk kesalahan masukan pengguna (Kamus Data Bersama, bagian 4).
-
-    Ekstensi: x-peran = peran yang boleh memanggil, x-kebutuhan = ID kebutuhan di E3.
-
-
-    Keputusan kontrak berikut melengkapi bagian yang belum ditetapkan di proposal (USULAN, menunggu konfirmasi PIC
-    kontrak):
-
-    1. Login 200 berisi token, peran, identitas, nama, kode_kelompok (hanya mahasiswa), kedaluwarsa.
-
-    2. PUT penilaian dan POST kirim memakai body {skor: [{kriteria_id, nilai}], catatan}; body POST kirim opsional.
-
-    3. PUT /komponen memakai body {komponen: [...]}; GET dan PUT mengembalikan daftar berpaginasi.
-
-    4. Nilai desimal (nilai_gabungan, nilai_akhir) berupa string dua desimal, mis. "76.50".
-
-    5. GET /kelompok/{kode}/nilai mengembalikan 200 dengan komponen kosong bila belum ada yang dirilis.
-
-    6. GET /penugasan menerima filter opsional kode_kelompok dan komponen.
-
-    7. Bentuk item respons (RubrikRingkas, TugasItem, HasilItem, dan seterusnya) adalah rancangan awal.
-
-    '
+  version: 0.3.0
+  description: Kontrak API Tim 5-B (Modul 5 Penilaian Multi-Penilai dan Rubrik). Format error mengikuti Kamus Data Bersama
+    bagian 4; masukan pengguna yang salah tidak boleh menghasilkan 500. x-peran = peran yang boleh memanggil endpoint.
 servers:
 - url: http://localhost:8110
   description: Lokal (APP_PORT tim 5-B, E10)
@@ -52,8 +28,6 @@ paths:
       summary: Pemeriksaan kesehatan (proses hidup dan koneksi database)
       x-peran:
       - publik
-      x-kebutuhan:
-      - BASE-09
       security: []
       responses:
         '200':
@@ -67,8 +41,6 @@ paths:
       summary: Login dengan identitas dan kata sandi
       x-peran:
       - publik
-      x-kebutuhan:
-      - BASE-01
       security: []
       requestBody:
         required: true
@@ -102,8 +74,6 @@ paths:
       summary: Membuat rubrik beserta kriteria
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-01
       requestBody:
         required: true
         content:
@@ -137,8 +107,6 @@ paths:
       summary: Daftar rubrik
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-01
       responses:
         '200':
           description: Daftar rubrik
@@ -162,8 +130,6 @@ paths:
       summary: Detail satu rubrik
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-01
       responses:
         '200':
           description: Detail rubrik
@@ -183,8 +149,6 @@ paths:
       summary: Mengubah rubrik yang belum terkunci
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-01
       requestBody:
         required: true
         content:
@@ -223,8 +187,6 @@ paths:
       summary: Membuat versi baru dari rubrik
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-01
       responses:
         '201':
           description: Versi baru dibuat
@@ -245,8 +207,6 @@ paths:
       summary: Daftar komponen dan bobotnya
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-02
       responses:
         '200':
           description: Daftar komponen
@@ -264,8 +224,6 @@ paths:
       summary: Mengganti seluruh daftar komponen dan bobot (atomik)
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-02
       requestBody:
         required: true
         content:
@@ -302,8 +260,6 @@ paths:
       summary: Daftar penugasan
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-03
       responses:
         '200':
           description: Daftar penugasan
@@ -334,8 +290,6 @@ paths:
       summary: Menugaskan penilai ke kelompok × komponen (maksimal 4 penilai)
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-03
       requestBody:
         required: true
         content:
@@ -374,8 +328,6 @@ paths:
       summary: Mencabut penugasan
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-03
       responses:
         '204':
           description: Penugasan dicabut
@@ -399,8 +351,6 @@ paths:
       x-peran:
       - dosen
       - mitra
-      x-kebutuhan:
-      - M5-04
       responses:
         '200':
           description: Daftar tugas penilai
@@ -427,8 +377,6 @@ paths:
       - dosen
       - mitra
       - koordinator
-      x-kebutuhan:
-      - M5-04
       responses:
         '200':
           description: Penilaian pada penugasan
@@ -449,8 +397,6 @@ paths:
       x-peran:
       - dosen
       - mitra
-      x-kebutuhan:
-      - M5-04
       requestBody:
         required: true
         content:
@@ -487,16 +433,12 @@ paths:
       tags:
       - Penilaian
       summary: Mengirim penilaian (hitung ulang nilai gabungan dan penanda kalibrasi)
-      description: Body opsional. Bila skor disertakan, skor disimpan (upsert) lalu status menjadi dikirim dalam
-        satu transaksi (E4 Operasi 2). Bila body kosong, yang dikirim adalah draf yang sudah tersimpan; 422 bila
-        belum semua kriteria terisi. Kirim ganda bersifat idempoten.
+      description: Body opsional. Bila skor disertakan, skor disimpan (upsert) lalu status menjadi dikirim dalam satu transaksi
+        (E4 Operasi 2). Bila body kosong, yang dikirim adalah draf yang sudah tersimpan; 422 bila belum semua kriteria terisi.
+        Kirim ganda bersifat idempoten.
       x-peran:
       - dosen
       - mitra
-      x-kebutuhan:
-      - M5-04
-      - M5-05
-      - M5-06
       requestBody:
         required: false
         content:
@@ -519,8 +461,7 @@ paths:
         '404':
           $ref: '#/components/responses/TidakAda404'
         '409':
-          description: NILAI_TERKUNCI atau SEDANG_DIPROSES (kunci baris tidak terlepas dalam 5 detik; boleh dicoba
-            ulang)
+          description: NILAI_TERKUNCI atau SEDANG_DIPROSES (kunci baris tidak terlepas dalam 5 detik; boleh dicoba ulang)
           content:
             application/json:
               schema:
@@ -534,9 +475,6 @@ paths:
       summary: Daftar hasil per kelompok × komponen (status dan penanda kalibrasi)
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-05
-      - M5-06
       parameters:
       - name: kode_kelompok
         in: query
@@ -571,9 +509,6 @@ paths:
       summary: Detail hasil satu kelompok × komponen
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-05
-      - M5-06
       responses:
         '200':
           description: Detail hasil
@@ -597,8 +532,6 @@ paths:
       summary: Memfinalisasi komponen (nilai terkunci)
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-07
       responses:
         '200':
           description: Komponen final
@@ -628,8 +561,6 @@ paths:
       summary: Membuka kembali komponen final dengan alasan wajib
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-08
       requestBody:
         required: true
         content:
@@ -669,8 +600,6 @@ paths:
       summary: Merilis nilai komponen
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-09
       responses:
         '200':
           description: Nilai dirilis
@@ -701,8 +630,6 @@ paths:
       x-peran:
       - mahasiswa
       - koordinator
-      x-kebutuhan:
-      - M5-09
       responses:
         '200':
           description: Nilai kelompok
@@ -723,8 +650,6 @@ paths:
       summary: Rekap nilai akhir (tertimbang semua komponen), JSON atau CSV
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - M5-10
       parameters:
       - name: tingkat
         in: query
@@ -747,8 +672,8 @@ paths:
       responses:
         '200':
           description: 'Rekap nilai: JSON berpaginasi, atau berkas CSV bila format=csv (Content-Type text/csv; Content-Disposition:
-            attachment). Kolom CSV: kode_kelompok, nama_kelompok, [nrp, nama_mahasiswa bila tingkat=mahasiswa],
-            satu kolom per komponen, nilai_akhir.'
+            attachment). Kolom CSV: kode_kelompok, nama_kelompok, [nrp, nama_mahasiswa bila tingkat=mahasiswa], satu kolom
+            per komponen, nilai_akhir.'
           content:
             application/json:
               schema:
@@ -772,8 +697,6 @@ paths:
       summary: Jejak audit per kelompok × komponen
       x-peran:
       - koordinator
-      x-kebutuhan:
-      - AC-9
       parameters:
       - name: kode_kelompok
         in: query
@@ -820,7 +743,6 @@ components:
       required: true
       schema:
         type: string
-        example: CP-2026-1-07
       description: Format CP-<periode>-nn (Kamus Data Bersama)
     Komponen:
       name: komponen
@@ -880,8 +802,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     TooMany429:
-      description: 429 TERLALU_BANYAK_PERMINTAAN (Kamus Data Bersama; maksimal 5 kegagalan per 15 menit per identitas,
-        E8)
+      description: 429 TERLALU_BANYAK_PERMINTAAN (Kamus Data Bersama; maksimal 5 kegagalan per 15 menit per identitas, E8)
       content:
         application/json:
           schema:
@@ -902,7 +823,6 @@ components:
             kode:
               type: string
               description: Konstanta huruf besar yang stabil, mis. VALIDASI_GAGAL
-              example: VALIDASI_GAGAL
             pesan:
               type: string
               description: Ringkasan untuk manusia
@@ -920,12 +840,10 @@ components:
           type: string
           maxLength: 64
           description: nrp (10 digit), kode_dosen, kode_mitra (MTR-nnn), atau kode koordinator
-          example: '5053241025'
         password:
           type: string
           maxLength: 72
           description: Maksimal 72 byte (batas bcrypt)
-          example: contoh-kata-sandi
     KriteriaInput:
       type: object
       required:
@@ -974,27 +892,21 @@ components:
       properties:
         kode:
           type: string
-          example: sidang-proposal
         nama:
           type: string
-          example: Sidang Proposal
         rubrik_id:
           type: integer
           format: int64
-          example: 1
         bobot_komponen:
           type: integer
           minimum: 1
           maximum: 100
-          example: 25
         rubrik_nama:
           type: string
           readOnly: true
-          example: Rubrik Penilaian Capstone Project
     KomponenInput:
       type: object
-      description: 'Kode komponen unik; jumlah bobot_komponen tepat 100; rubrik harus ada. Body berbentuk {"komponen":
-        [...]}.'
+      description: 'Kode komponen unik; jumlah bobot_komponen tepat 100; rubrik harus ada. Body berbentuk {"komponen": [...]}.'
       required:
       - komponen
       properties:
@@ -1015,7 +927,6 @@ components:
         kode_kelompok:
           type: string
           description: Format CP-<periode>-nn (Kamus Data Bersama)
-          example: CP-2026-1-07
         komponen:
           type: string
           description: Kode komponen
@@ -1034,20 +945,13 @@ components:
           maximum: 100
     PenilaianInput:
       type: object
-      description: Daftar skor berupa array {kriteria_id, nilai}. Saat kirim, semua kriteria rubrik harus terisi
-        dan milik rubrik komponen tersebut.
+      description: Daftar skor berupa array {kriteria_id, nilai}. Saat kirim, semua kriteria rubrik harus terisi dan milik
+        rubrik komponen tersebut.
       properties:
         skor:
           type: array
           items:
             $ref: '#/components/schemas/SkorInput'
-          example:
-          - kriteria_id: 11
-            nilai: 80
-          - kriteria_id: 12
-            nilai: 85
-          - kriteria_id: 13
-            nilai: 75
         catatan:
           type: string
           maxLength: 2000
@@ -1061,7 +965,6 @@ components:
           minLength: 10
           maxLength: 500
           description: Wajib; panjang dihitung setelah trim
-          example: Skor kriteria 2 salah input oleh penilai.
     PaginatedList:
       type: object
       required:
@@ -1069,8 +972,8 @@ components:
       - halaman
       - per_halaman
       - total
-      description: Bentuk umum respons daftar berpaginasi (Kamus Data Bersama). Tiap endpoint memakai varian bertipe
-        (RubrikList, TugasList, dan seterusnya).
+      description: Bentuk umum respons daftar berpaginasi (Kamus Data Bersama). Tiap endpoint memakai varian bertipe (RubrikList,
+        TugasList, dan seterusnya).
       properties:
         data:
           type: array
@@ -1093,9 +996,8 @@ components:
       properties:
         token:
           type: string
-          description: 'JWT HS256 (klaim sub, peran, iat, exp; berlaku 60 menit). Dikirim sebagai header Authorization:
-            Bearer <token>.'
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.contoh.contoh
+          description: 'JWT HS256 (klaim sub, peran, iat, exp; berlaku 60 menit). Dikirim sebagai header Authorization: Bearer
+            <token>.'
         peran:
           type: string
           enum:
@@ -1103,23 +1005,17 @@ components:
           - dosen
           - mitra
           - koordinator
-          example: koordinator
         identitas:
           type: string
-          example: KOOR1
         nama:
           type: string
-          example: Koordinator Capstone
         kode_kelompok:
           type: string
           nullable: true
-          description: Hanya terisi untuk peran mahasiswa (dicari server dari anggota_kelompok); null untuk peran
-            lain.
-          example: null
+          description: Hanya terisi untuk peran mahasiswa (dicari server dari anggota_kelompok); null untuk peran lain.
         kedaluwarsa:
           type: string
           format: date-time
-          example: '2026-12-08T10:00:00+07:00'
     Kriteria:
       type: object
       required:
@@ -1131,22 +1027,17 @@ components:
         id:
           type: integer
           format: int64
-          example: 11
         nama:
           type: string
-          example: Identifikasi masalah dan kebutuhan mitra
         bobot:
           type: integer
           minimum: 1
           maximum: 100
-          example: 8
         cpmk:
           type: integer
           minimum: 1
-          example: 1
         deskripsi:
           type: string
-          example: ''
     RubrikRingkas:
       type: object
       required:
@@ -1160,24 +1051,18 @@ components:
         id:
           type: integer
           format: int64
-          example: 1
         kode:
           type: string
-          example: rubrik-capstone
         versi:
           type: integer
           minimum: 1
-          example: 1
         nama:
           type: string
-          example: Rubrik Penilaian Capstone Project
         terkunci:
           type: boolean
-          example: false
         dibuat_pada:
           type: string
           format: date-time
-          example: '2026-12-02T09:00:00+07:00'
     Rubrik:
       allOf:
       - $ref: '#/components/schemas/RubrikRingkas'
@@ -1195,7 +1080,6 @@ components:
       - belum_dinilai
       - draf
       - dikirim
-      example: draf
       description: belum_dinilai = belum ada baris penilaian; draf dan dikirim sesuai tabel penilaian.
     StatusKomponen:
       type: string
@@ -1203,7 +1087,6 @@ components:
       - berjalan
       - final
       - dirilis
-      example: berjalan
     Penugasan:
       type: object
       required:
@@ -1218,31 +1101,24 @@ components:
         id:
           type: integer
           format: int64
-          example: 5
         penilai:
           type: string
-          example: DSN01
         nama_penilai:
           type: string
-          example: Dosen Contoh
         peran_penilai:
           type: string
           enum:
           - dosen
           - mitra
-          example: dosen
         kode_kelompok:
           type: string
-          example: CP-2026-1-07
         komponen:
           type: string
-          example: sidang-proposal
         status_penilaian:
           $ref: '#/components/schemas/StatusPenilaian'
         dibuat_pada:
           type: string
           format: date-time
-          example: '2026-12-02T10:00:00+07:00'
     TugasItem:
       type: object
       required:
@@ -1255,19 +1131,14 @@ components:
         penugasan_id:
           type: integer
           format: int64
-          example: 5
         kode_kelompok:
           type: string
-          example: CP-2026-1-07
         nama_kelompok:
           type: string
-          example: Kelompok 07
         komponen:
           type: string
-          example: sidang-proposal
         nama_komponen:
           type: string
-          example: Sidang Proposal
         status_penilaian:
           $ref: '#/components/schemas/StatusPenilaian'
         status_komponen:
@@ -1281,12 +1152,10 @@ components:
         kriteria_id:
           type: integer
           format: int64
-          example: 11
         nilai:
           type: integer
           minimum: 0
           maximum: 100
-          example: 80
     Penilaian:
       type: object
       required:
@@ -1301,13 +1170,10 @@ components:
         penugasan_id:
           type: integer
           format: int64
-          example: 5
         kode_kelompok:
           type: string
-          example: CP-2026-1-07
         komponen:
           type: string
-          example: sidang-proposal
         status:
           $ref: '#/components/schemas/StatusPenilaian'
         status_komponen:
@@ -1320,23 +1186,19 @@ components:
             $ref: '#/components/schemas/Skor'
         catatan:
           type: string
-          example: ''
         dikirim_pada:
           type: string
           format: date-time
           nullable: true
-          example: null
         diubah_pada:
           type: string
           format: date-time
           nullable: true
-          example: '2026-12-05T14:00:00+07:00'
     NilaiDesimal:
       type: string
       pattern: ^[0-9]{1,3}\.[0-9]{2}$
-      example: '76.50'
-      description: Nilai desimal sebagai string dua desimal persis dari server (NUMERIC(5,2), Kamus Data bagian
-        7). Frontend menampilkannya apa adanya, tanpa menghitung ulang dengan float.
+      description: Nilai desimal sebagai string dua desimal persis dari server (NUMERIC(5,2), Kamus Data bagian 7). Frontend
+        menampilkannya apa adanya, tanpa menghitung ulang dengan float.
     HasilItem:
       type: object
       required:
@@ -1347,16 +1209,12 @@ components:
       properties:
         kode_kelompok:
           type: string
-          example: CP-2026-1-07
         nama_kelompok:
           type: string
-          example: Kelompok 07
         komponen:
           type: string
-          example: sidang-proposal
         nama_komponen:
           type: string
-          example: Sidang Proposal
         status:
           $ref: '#/components/schemas/StatusKomponen'
         nilai_gabungan:
@@ -1365,17 +1223,13 @@ components:
           nullable: true
         perlu_kalibrasi:
           type: boolean
-          example: false
         jumlah_penugasan:
           type: integer
-          example: 2
         jumlah_dikirim:
           type: integer
-          example: 2
         diubah_pada:
           type: string
           format: date-time
-          example: '2026-12-05T15:00:00+07:00'
     HasilDetail:
       allOf:
       - $ref: '#/components/schemas/HasilItem'
@@ -1386,8 +1240,7 @@ components:
         properties:
           kriteria:
             type: array
-            description: Skor per kriteria dari penilai yang sudah mengirim. selisih = skor tertinggi dikurangi
-              terendah.
+            description: Skor per kriteria dari penilai yang sudah mengirim. selisih = skor tertinggi dikurangi terendah.
             items:
               type: object
               required:
@@ -1400,26 +1253,20 @@ components:
                 kriteria_id:
                   type: integer
                   format: int64
-                  example: 11
                 nama:
                   type: string
-                  example: Identifikasi masalah dan kebutuhan mitra
                 cpmk:
                   type: integer
-                  example: 1
                 bobot:
                   type: integer
-                  example: 8
                 nilai_gabungan:
                   allOf:
                   - $ref: '#/components/schemas/NilaiDesimal'
                   nullable: true
                 selisih:
                   type: integer
-                  example: 28
                 perlu_kalibrasi:
                   type: boolean
-                  example: true
                 skor:
                   type: array
                   items:
@@ -1431,21 +1278,17 @@ components:
                     properties:
                       penilai:
                         type: string
-                        example: DSN01
                       nama_penilai:
                         type: string
-                        example: Dosen Contoh
                       peran:
                         type: string
                         enum:
                         - dosen
                         - mitra
-                        example: dosen
                       nilai:
                         type: integer
                         minimum: 0
                         maximum: 100
-                        example: 78
           penilai:
             type: array
             items:
@@ -1459,40 +1302,33 @@ components:
                 penugasan_id:
                   type: integer
                   format: int64
-                  example: 5
                 penilai:
                   type: string
-                  example: DSN01
                 nama_penilai:
                   type: string
-                  example: Dosen Contoh
                 peran:
                   type: string
                   enum:
                   - dosen
                   - mitra
-                  example: dosen
                 status_penilaian:
                   $ref: '#/components/schemas/StatusPenilaian'
                 dikirim_pada:
                   type: string
                   format: date-time
                   nullable: true
-                  example: '2026-12-05T14:30:00+07:00'
     NilaiKelompok:
       type: object
       required:
       - kode_kelompok
       - komponen
-      description: Hanya komponen berstatus dirilis. Sebelum ada yang dirilis, komponen = [] (UI menampilkan keadaan
-        kosong). Tanpa nama penilai dan tanpa skor per penilai.
+      description: Hanya komponen berstatus dirilis. Sebelum ada yang dirilis, komponen = [] (UI menampilkan keadaan kosong).
+        Tanpa nama penilai dan tanpa skor per penilai.
       properties:
         kode_kelompok:
           type: string
-          example: CP-2026-1-07
         nama_kelompok:
           type: string
-          example: Kelompok 07
         komponen:
           type: array
           items:
@@ -1506,13 +1342,10 @@ components:
             properties:
               kode:
                 type: string
-                example: sidang-proposal
               nama:
                 type: string
-                example: Sidang Proposal
               bobot_komponen:
                 type: integer
-                example: 25
               nilai_gabungan:
                 $ref: '#/components/schemas/NilaiDesimal'
               kriteria:
@@ -1527,21 +1360,16 @@ components:
                   properties:
                     nama:
                       type: string
-                      example: Identifikasi masalah dan kebutuhan mitra
                     cpmk:
                       type: integer
-                      example: 1
                     bobot:
                       type: integer
-                      example: 8
                     nilai_gabungan:
                       $ref: '#/components/schemas/NilaiDesimal'
               catatan:
                 type: array
                 items:
                   type: string
-                example:
-                - Pembahasan masalah sudah jelas.
     RekapItem:
       type: object
       required:
@@ -1551,19 +1379,15 @@ components:
       properties:
         kode_kelompok:
           type: string
-          example: CP-2026-1-07
         nama_kelompok:
           type: string
-          example: Kelompok 07
         nrp:
           type: string
           nullable: true
           description: Terisi hanya bila tingkat=mahasiswa.
-          example: null
         nama_mahasiswa:
           type: string
           nullable: true
-          example: null
         komponen:
           type: array
           items:
@@ -1574,7 +1398,6 @@ components:
             properties:
               kode:
                 type: string
-                example: sidang-proposal
               nilai_gabungan:
                 $ref: '#/components/schemas/NilaiDesimal'
         nilai_akhir:
@@ -1590,14 +1413,11 @@ components:
         id:
           type: integer
           format: int64
-          example: 1
         waktu:
           type: string
           format: date-time
-          example: '2026-12-05T15:00:00+07:00'
         aktor:
           type: string
-          example: KOOR1
         aksi:
           type: string
           enum:
@@ -1608,31 +1428,23 @@ components:
           - RILIS
           - PENUGASAN_DITAMBAH
           - PENUGASAN_DIHAPUS
-          example: FINALISASI
         kode_kelompok:
           type: string
           nullable: true
-          example: CP-2026-1-07
         komponen:
           type: string
           nullable: true
-          example: sidang-proposal
         nilai_lama:
           type: object
           nullable: true
           additionalProperties: true
-          example: null
         nilai_baru:
           type: object
           nullable: true
           additionalProperties: true
-          example:
-            status: final
-            nilai_gabungan: '76.50'
         alasan:
           type: string
           nullable: true
-          example: null
     RubrikList:
       type: object
       required:
@@ -1647,13 +1459,10 @@ components:
             $ref: '#/components/schemas/RubrikRingkas'
         halaman:
           type: integer
-          example: 1
         per_halaman:
           type: integer
-          example: 20
         total:
           type: integer
-          example: 1
     KomponenList:
       type: object
       required:
@@ -1668,13 +1477,10 @@ components:
             $ref: '#/components/schemas/KomponenItem'
         halaman:
           type: integer
-          example: 1
         per_halaman:
           type: integer
-          example: 20
         total:
           type: integer
-          example: 1
     PenugasanList:
       type: object
       required:
@@ -1689,13 +1495,10 @@ components:
             $ref: '#/components/schemas/Penugasan'
         halaman:
           type: integer
-          example: 1
         per_halaman:
           type: integer
-          example: 20
         total:
           type: integer
-          example: 1
     TugasList:
       type: object
       required:
@@ -1710,13 +1513,10 @@ components:
             $ref: '#/components/schemas/TugasItem'
         halaman:
           type: integer
-          example: 1
         per_halaman:
           type: integer
-          example: 20
         total:
           type: integer
-          example: 1
     HasilList:
       type: object
       required:
@@ -1731,13 +1531,10 @@ components:
             $ref: '#/components/schemas/HasilItem'
         halaman:
           type: integer
-          example: 1
         per_halaman:
           type: integer
-          example: 20
         total:
           type: integer
-          example: 1
     RekapList:
       type: object
       required:
@@ -1752,13 +1549,10 @@ components:
             $ref: '#/components/schemas/RekapItem'
         halaman:
           type: integer
-          example: 1
         per_halaman:
           type: integer
-          example: 20
         total:
           type: integer
-          example: 1
     AuditList:
       type: object
       required:
@@ -1773,10 +1567,7 @@ components:
             $ref: '#/components/schemas/AuditItem'
         halaman:
           type: integer
-          example: 1
         per_halaman:
           type: integer
-          example: 20
         total:
           type: integer
-          example: 1
